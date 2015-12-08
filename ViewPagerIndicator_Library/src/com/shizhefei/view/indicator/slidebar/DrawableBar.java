@@ -2,7 +2,6 @@ package com.shizhefei.view.indicator.slidebar;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
-
 import android.view.View;
 /**
  * 
@@ -29,6 +28,7 @@ public class DrawableBar implements ScrollBar {
 		this(context, drawable, Gravity.BOTTOM);
 	}
 
+	@SuppressWarnings("deprecation")
 	public DrawableBar(Context context, Drawable drawable, Gravity gravity) {
 		view = new View(context);
 		this.drawable = drawable;
