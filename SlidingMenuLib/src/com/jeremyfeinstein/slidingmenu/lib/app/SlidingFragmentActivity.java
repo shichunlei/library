@@ -1,15 +1,18 @@
 package com.jeremyfeinstein.slidingmenu.lib.app;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
+import android.widget.Toast;
 
 import com.jeremyfeinstein.slidingmenu.lib.SlidingMenu;
 
 public class SlidingFragmentActivity extends FragmentActivity implements SlidingActivityBase {
 
+	public Context context;
 	private SlidingActivityHelper mHelper;
 
 	/*
@@ -20,6 +23,7 @@ public class SlidingFragmentActivity extends FragmentActivity implements Sliding
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		context = this;
 		mHelper = new SlidingActivityHelper(this);
 		mHelper.onCreate(savedInstanceState);
 	}
@@ -196,6 +200,24 @@ public class SlidingFragmentActivity extends FragmentActivity implements Sliding
 		if (b)
 			return b;
 		return super.onKeyUp(keyCode, event);
+	}
+
+	/**
+	 * Toast提示
+	 * 
+	 * @param text
+	 */
+	public void showToast(String text) {
+		Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
+	}
+
+	/**
+	 * Toast提示
+	 * 
+	 * @param resid
+	 */
+	public void showToast(int resid) {
+		Toast.makeText(context, getString(resid), Toast.LENGTH_SHORT).show();
 	}
 
 }
