@@ -1,9 +1,13 @@
 package com.chingtech.utils;
 
+import android.content.Context;
 import android.view.View;
 import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.view.animation.CycleInterpolator;
 import android.view.animation.TranslateAnimation;
+import android.view.animation.Animation.AnimationListener;
+import android.widget.ImageView;
 
 /**
  * 动画辅助类
@@ -26,9 +30,8 @@ public class AnimationUtil {
 	 * @return
 	 */
 	public static TranslateAnimation moveToViewBottom() {
-		TranslateAnimation mHiddenAction = new TranslateAnimation(
-				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF,
-				0.0f, Animation.RELATIVE_TO_SELF, 0.0f,
+		TranslateAnimation mHiddenAction = new TranslateAnimation(Animation.RELATIVE_TO_SELF, 0.0f,
+				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF, 0.0f,
 				Animation.RELATIVE_TO_SELF, 1.0f);
 		mHiddenAction.setDuration(500);
 		return mHiddenAction;
@@ -40,9 +43,8 @@ public class AnimationUtil {
 	 * @return
 	 */
 	public static TranslateAnimation moveToViewLocation() {
-		TranslateAnimation mHiddenAction = new TranslateAnimation(
-				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF,
-				0.0f, Animation.RELATIVE_TO_SELF, 1.0f,
+		TranslateAnimation mHiddenAction = new TranslateAnimation(Animation.RELATIVE_TO_SELF, 0.0f,
+				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF, 1.0f,
 				Animation.RELATIVE_TO_SELF, 0.0f);
 		mHiddenAction.setDuration(500);
 		return mHiddenAction;
@@ -54,9 +56,8 @@ public class AnimationUtil {
 	 * @return
 	 */
 	public static TranslateAnimation topToViewLocation() {
-		TranslateAnimation mHiddenAction = new TranslateAnimation(
-				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF,
-				0.0f, Animation.RELATIVE_TO_SELF, -1.0f,
+		TranslateAnimation mHiddenAction = new TranslateAnimation(Animation.RELATIVE_TO_SELF, 0.0f,
+				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF, -1.0f,
 				Animation.RELATIVE_TO_SELF, 0.0f);
 		mHiddenAction.setDuration(500);
 		return mHiddenAction;
@@ -68,9 +69,8 @@ public class AnimationUtil {
 	 * @return
 	 */
 	public static TranslateAnimation moveToViewTop() {
-		TranslateAnimation mHiddenAction = new TranslateAnimation(
-				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF,
-				0.0f, Animation.RELATIVE_TO_SELF, 0.0f,
+		TranslateAnimation mHiddenAction = new TranslateAnimation(Animation.RELATIVE_TO_SELF, 0.0f,
+				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF, 0.0f,
 				Animation.RELATIVE_TO_SELF, -1.0f);
 		mHiddenAction.setDuration(500);
 		return mHiddenAction;
@@ -82,9 +82,8 @@ public class AnimationUtil {
 	 * @return
 	 */
 	public static TranslateAnimation rightToViewLocation() {
-		TranslateAnimation mHiddenAction = new TranslateAnimation(
-				Animation.RELATIVE_TO_SELF, 1.0f, Animation.RELATIVE_TO_SELF,
-				0.0f, Animation.RELATIVE_TO_SELF, 0.0f,
+		TranslateAnimation mHiddenAction = new TranslateAnimation(Animation.RELATIVE_TO_SELF, 1.0f,
+				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF, 0.0f,
 				Animation.RELATIVE_TO_SELF, 0.0f);
 		mHiddenAction.setDuration(500);
 		return mHiddenAction;
@@ -96,9 +95,8 @@ public class AnimationUtil {
 	 * @return
 	 */
 	public static TranslateAnimation moveToViewRight() {
-		TranslateAnimation mHiddenAction = new TranslateAnimation(
-				Animation.RELATIVE_TO_SELF, 0.0f, Animation.RELATIVE_TO_SELF,
-				1.0f, Animation.RELATIVE_TO_SELF, 0.0f,
+		TranslateAnimation mHiddenAction = new TranslateAnimation(Animation.RELATIVE_TO_SELF, 0.0f,
+				Animation.RELATIVE_TO_SELF, 1.0f, Animation.RELATIVE_TO_SELF, 0.0f,
 				Animation.RELATIVE_TO_SELF, 0.0f);
 		mHiddenAction.setDuration(500);
 		return mHiddenAction;
@@ -115,5 +113,33 @@ public class AnimationUtil {
 		translateAnimation.setInterpolator(new CycleInterpolator(3));
 		translateAnimation.setDuration(500);
 		view.startAnimation(translateAnimation);
+	}
+
+	/**
+	 * 
+	 * 
+	 * @param context
+	 * @param imageview
+	 */
+	public static void startAnimation(Context context, final ImageView imageview) {
+		Animation mAnimation = AnimationUtils.loadAnimation(context, R.anim.cart_anim);
+		mAnimation.setAnimationListener(new AnimationListener() {
+
+			@Override
+			public void onAnimationStart(Animation animation) {
+			}
+
+			@Override
+			public void onAnimationRepeat(Animation animation) {
+			}
+
+			@Override
+			public void onAnimationEnd(Animation animation) {
+				imageview.setVisibility(View.INVISIBLE);
+			}
+		});
+
+		imageview.setVisibility(View.VISIBLE);
+		imageview.startAnimation(mAnimation);
 	}
 }
