@@ -1,70 +1,70 @@
 package com.github.mikephil.charting.highlight;
 
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarLineScatterCandleBubbleData;
 import com.github.mikephil.charting.data.ChartData;
-import com.github.mikephil.charting.data.CombinedData;
 import com.github.mikephil.charting.data.DataSet;
-import com.github.mikephil.charting.interfaces.BarLineScatterCandleBubbleDataProvider;
-import com.github.mikephil.charting.utils.SelectionDetail;
+import com.github.mikephil.charting.interfaces.dataprovider.BarDataProvider;
+import com.github.mikephil.charting.interfaces.dataprovider.CombinedDataProvider;
+import com.github.mikephil.charting.interfaces.datasets.IDataSet;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by Philipp Jahoda on 12/09/15.
  */
-public class CombinedHighlighter extends
-		ChartHighlighter<BarLineScatterCandleBubbleDataProvider> {
-
-	public CombinedHighlighter(BarLineScatterCandleBubbleDataProvider chart) {
-		super(chart);
-	}
+public class CombinedHighlighter extends ChartHighlighter<CombinedDataProvider> implements Highlighter {
 
 	/**
-	 * Returns a list of SelectionDetail object corresponding to the given
-	 * xIndex.
-	 *
-	 * @param xIndex
-	 * @return
+	 * bar highlighter for supporting stacked highlighting
 	 */
+	protected BarHighlighter barHighlighter;
+
+	public CombinedHighlighter(CombinedDataProvider chart, BarDataProvider barChart) {
+		super(chart);
+
+		// if there is BarData, create a BarHighlighter
+		barHighlighter = barChart.getBarData() == null ? null : new BarHighlighter(barChart);
+	}
+
+	@SuppressWarnings("rawtypes")
 	@Override
-	protected List<SelectionDetail> getSelectionDetailsAtIndex(int xIndex) {
+	protected List<Highlight> getHighlightsAtXPos(float xVal, float x, float y) {
 
-		CombinedData data = (CombinedData) mChart.getData();
+		mHighlightBuffer.clear();
 
-		// get all chartdata objects
-		@SuppressWarnings("rawtypes")
-		List<ChartData> dataObjects = data.getAllData();
-
-		List<SelectionDetail> vals = new ArrayList<SelectionDetail>();
-
-		float[] pts = new float[2];
+		List<BarLineScatterCandleBubbleData> dataObjects = mChart.getCombinedData().getAllData();
 
 		for (int i = 0; i < dataObjects.size(); i++) {
 
-			for (int j = 0; j < dataObjects.get(i).getDataSetCount(); j++) {
+			ChartData dataObject = dataObjects.get(i);
 
-				DataSet<?> dataSet = dataObjects.get(i).getDataSetByIndex(j);
+			// in case of BarData, let the BarHighlighter take over
+			if (barHighlighter != null && dataObject instanceof BarData) {
+				Highlight high = barHighlighter.getHighlight(x, y);
 
-				// dont include datasets that cannot be highlighted
-				if (!dataSet.isHighlightEnabled())
-					continue;
+				if (high != null) {
+					high.setDataIndex(i);
+					mHighlightBuffer.add(high);
+				}
+			} else {
 
-				// extract all y-values from all DataSets at the given x-index
-				final float yVal = dataSet.getYValForXIndex(xIndex);
-				if (yVal == Float.NaN)
-					continue;
+				for (int j = 0, dataSetCount = dataObject.getDataSetCount(); j < dataSetCount; j++) {
 
-				pts[1] = yVal;
+					IDataSet dataSet = dataObjects.get(i).getDataSetByIndex(j);
 
-				mChart.getTransformer(dataSet.getAxisDependency())
-						.pointValuesToPixel(pts);
+					// don't include datasets that cannot be highlighted
+					if (!dataSet.isHighlightEnabled())
+						continue;
 
-				if (!Float.isNaN(pts[1])) {
-					vals.add(new SelectionDetail(pts[1], j, dataSet));
+					Highlight s1 = buildHighlight(dataSet, j, xVal, DataSet.Rounding.CLOSEST);
+					s1.setDataIndex(i);
+					mHighlightBuffer.add(s1);
 				}
 			}
 		}
 
-		return vals;
+		return mHighlightBuffer;
 	}
+
 }

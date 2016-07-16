@@ -7,7 +7,7 @@ import android.graphics.Typeface;
 import com.github.mikephil.charting.utils.Utils;
 
 /**
- * This class encapsulates everything both Axis and Legend have in common.
+ * This class encapsulates everything both Axis, Legend and LimitLines have in common.
  *
  * @author Philipp Jahoda
  */
@@ -42,6 +42,7 @@ public abstract class ComponentBase {
      * the text color to use for the labels
      */
     protected int mTextColor = Color.BLACK;
+
 
     public ComponentBase() {
 
@@ -129,6 +130,7 @@ public abstract class ComponentBase {
     public float getTextSize() {
         return mTextSize;
     }
+
 
     /**
      * Sets the text color to use for the labels. Make sure to use

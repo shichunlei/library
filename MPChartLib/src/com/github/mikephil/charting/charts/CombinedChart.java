@@ -6,30 +6,21 @@ import android.util.AttributeSet;
 
 import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.BubbleData;
-import com.github.mikephil.charting.data.BubbleDataSet;
 import com.github.mikephil.charting.data.CandleData;
 import com.github.mikephil.charting.data.CombinedData;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.ScatterData;
 import com.github.mikephil.charting.highlight.CombinedHighlighter;
-import com.github.mikephil.charting.interfaces.BarDataProvider;
-import com.github.mikephil.charting.interfaces.BubbleDataProvider;
-import com.github.mikephil.charting.interfaces.CandleDataProvider;
-import com.github.mikephil.charting.interfaces.LineDataProvider;
-import com.github.mikephil.charting.interfaces.ScatterDataProvider;
+import com.github.mikephil.charting.interfaces.dataprovider.CombinedDataProvider;
 import com.github.mikephil.charting.renderer.CombinedChartRenderer;
 
 /**
  * This chart class allows the combination of lines, bars, scatter and candle
  * data all displayed in one chart area.
- * 
+ *
  * @author Philipp Jahoda
  */
-public class CombinedChart extends BarLineChartBase<CombinedData> implements LineDataProvider,
-        BarDataProvider, ScatterDataProvider, CandleDataProvider, BubbleDataProvider {
-
-    /** flag that enables or disables the highlighting arrow */
-    private boolean mDrawHighlightArrow = false;
+public class CombinedChart extends BarLineChartBase<CombinedData> implements CombinedDataProvider {
 
     /**
      * if set to true, all values are drawn above their bars, instead of below
@@ -37,13 +28,19 @@ public class CombinedChart extends BarLineChartBase<CombinedData> implements Lin
      */
     private boolean mDrawValueAboveBar = true;
 
+
+    /**
+     * flag that indicates whether the highlight should be full-bar oriented, or single-value?
+     */
+    protected boolean mHighlightFullBarEnabled = false;
+
     /**
      * if set to true, a grey area is drawn behind each bar that indicates the
      * maximum value
      */
     private boolean mDrawBarShadow = false;
 
-    protected DrawOrder[] mDrawOrder = new DrawOrder[] {
+    protected DrawOrder[] mDrawOrder = new DrawOrder[]{
             DrawOrder.BAR, DrawOrder.BUBBLE, DrawOrder.LINE, DrawOrder.CANDLE, DrawOrder.SCATTER
     };
 
@@ -71,37 +68,15 @@ public class CombinedChart extends BarLineChartBase<CombinedData> implements Lin
     protected void init() {
         super.init();
 
-        mHighlighter = new CombinedHighlighter(this);
+        setHighlighter(new CombinedHighlighter(this, this));
 
-        // mRenderer = new CombinedChartRenderer(this, mAnimator,
-        // mViewPortHandler);
+        // Old default behaviour
+        setHighlightFullBarEnabled(true);
     }
 
     @Override
-    protected void calcMinMax() {
-        super.calcMinMax();
-        
-        if (getBarData() != null || getCandleData() != null || getBubbleData() != null) {
-            mXChartMin = -0.5f;
-            mXChartMax = mData.getXVals().size() - 0.5f;
-
-            if (getBubbleData() != null) {
-
-                for (BubbleDataSet set : getBubbleData().getDataSets()) {
-
-                    final float xmin = set.getXMin();
-                    final float xmax = set.getXMax();
-
-                    if (xmin < mXChartMin)
-                        mXChartMin = xmin;
-
-                    if (xmax > mXChartMax)
-                        mXChartMax = xmax;
-                }
-            }
-        }
-
-        mDeltaX = Math.abs(mXChartMax - mXChartMin);
+    public CombinedData getCombinedData() {
+        return mData;
     }
 
     @Override
@@ -109,6 +84,7 @@ public class CombinedChart extends BarLineChartBase<CombinedData> implements Lin
         mData = null;
         mRenderer = null;
         super.setData(data);
+        setHighlighter(new CombinedHighlighter(this, this));
         mRenderer = new CombinedChartRenderer(this, mAnimator, mViewPortHandler);
         mRenderer.initBuffers();
     }
@@ -158,24 +134,10 @@ public class CombinedChart extends BarLineChartBase<CombinedData> implements Lin
         return mDrawValueAboveBar;
     }
 
-    @Override
-    public boolean isDrawHighlightArrowEnabled() {
-        return mDrawHighlightArrow;
-    }
-
-    /**
-     * set this to true to draw the highlightning arrow
-     * 
-     * @param enabled
-     */
-    public void setDrawHighlightArrow(boolean enabled) {
-        mDrawHighlightArrow = enabled;
-    }
-
     /**
      * If set to true, all values are drawn above their bars, instead of below
      * their top.
-     * 
+     *
      * @param enabled
      */
     public void setDrawValueAboveBar(boolean enabled) {
@@ -186,7 +148,7 @@ public class CombinedChart extends BarLineChartBase<CombinedData> implements Lin
     /**
      * If set to true, a grey area is drawn behind each bar that indicates the
      * maximum value. Enabling his will reduce performance by about 50%.
-     * 
+     *
      * @param enabled
      */
     public void setDrawBarShadow(boolean enabled) {
@@ -194,8 +156,26 @@ public class CombinedChart extends BarLineChartBase<CombinedData> implements Lin
     }
 
     /**
+     * Set this to true to make the highlight operation full-bar oriented,
+     * false to make it highlight single values (relevant only for stacked).
+     *
+     * @param enabled
+     */
+    public void setHighlightFullBarEnabled(boolean enabled) {
+        mHighlightFullBarEnabled = enabled;
+    }
+
+    /**
+     * @return true the highlight operation is be full-bar oriented, false if single-value
+     */
+    @Override
+    public boolean isHighlightFullBarEnabled() {
+        return mHighlightFullBarEnabled;
+    }
+
+    /**
      * Returns the currently set draw order.
-     * 
+     *
      * @return
      */
     public DrawOrder[] getDrawOrder() {
@@ -207,7 +187,7 @@ public class CombinedChart extends BarLineChartBase<CombinedData> implements Lin
      * earlier you place them in the provided array, the further they will be in
      * the background. e.g. if you provide new DrawOrer[] { DrawOrder.BAR,
      * DrawOrder.LINE }, the bars will be drawn behind the lines.
-     * 
+     *
      * @param order
      */
     public void setDrawOrder(DrawOrder[] order) {

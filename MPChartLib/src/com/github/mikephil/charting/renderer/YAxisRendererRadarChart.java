@@ -2,11 +2,11 @@ package com.github.mikephil.charting.renderer;
 
 import android.graphics.Canvas;
 import android.graphics.Path;
-import android.graphics.PointF;
 
 import com.github.mikephil.charting.charts.RadarChart;
 import com.github.mikephil.charting.components.LimitLine;
 import com.github.mikephil.charting.components.YAxis;
+import com.github.mikephil.charting.utils.MPPointF;
 import com.github.mikephil.charting.utils.Utils;
 import com.github.mikephil.charting.utils.ViewPortHandler;
 
@@ -14,197 +14,213 @@ import java.util.List;
 
 public class YAxisRendererRadarChart extends YAxisRenderer {
 
-	private RadarChart mChart;
+    private RadarChart mChart;
 
-	public YAxisRendererRadarChart(ViewPortHandler viewPortHandler, YAxis yAxis, RadarChart chart) {
-		super(viewPortHandler, yAxis, null);
+    public YAxisRendererRadarChart(ViewPortHandler viewPortHandler, YAxis yAxis, RadarChart chart) {
+        super(viewPortHandler, yAxis, null);
 
-		this.mChart = chart;
-	}
+        this.mChart = chart;
+    }
 
-	@Override
-	public void computeAxis(float yMin, float yMax) {
-		computeAxisValues(yMin, yMax);
-	}
+    @Override
+    protected void computeAxisValues(float min, float max) {
 
-	@Override
-	protected void computeAxisValues(float min, float max) {
-		float yMin = min;
-		float yMax = max;
+        float yMin = min;
+        float yMax = max;
 
-		int labelCount = mYAxis.getLabelCount();
-		double range = Math.abs(yMax - yMin);
+        int labelCount = mAxis.getLabelCount();
+        double range = Math.abs(yMax - yMin);
 
-		if (labelCount == 0 || range <= 0) {
-			mYAxis.mEntries = new float[] {};
-			mYAxis.mEntryCount = 0;
-			return;
-		}
+        if (labelCount == 0 || range <= 0) {
+            mAxis.mEntries = new float[]{};
+            mAxis.mEntryCount = 0;
+            return;
+        }
 
-		double rawInterval = range / labelCount;
-		double interval = Utils.roundToNextSignificant(rawInterval);
-		double intervalMagnitude = Math.pow(10, (int) Math.log10(interval));
-		int intervalSigDigit = (int) (interval / intervalMagnitude);
-		if (intervalSigDigit > 5) {
-			// Use one order of magnitude higher, to avoid intervals like 0.9 or
-			// 90
-			interval = Math.floor(10 * intervalMagnitude);
-		}
+        // Find out how much spacing (in y value space) between axis values
+        double rawInterval = range / labelCount;
+        double interval = Utils.roundToNextSignificant(rawInterval);
 
-		// force label count
-		if (mYAxis.isForceLabelsEnabled()) {
+        // If granularity is enabled, then do not allow the interval to go below specified granularity.
+        // This is used to avoid repeated values when rounding values for display.
+        if (mAxis.isGranularityEnabled())
+            interval = interval < mAxis.getGranularity() ? mAxis.getGranularity() : interval;
 
-			float step = (float) range / (float) (labelCount-1);
-			mYAxis.mEntryCount = labelCount;
+        // Normalize interval
+        double intervalMagnitude = Utils.roundToNextSignificant(Math.pow(10, (int) Math.log10(interval)));
+        int intervalSigDigit = (int) (interval / intervalMagnitude);
+        if (intervalSigDigit > 5) {
+            // Use one order of magnitude higher, to avoid intervals like 0.9 or
+            // 90
+            interval = Math.floor(10 * intervalMagnitude);
+        }
 
-			if (mYAxis.mEntries.length < labelCount) {
-				// Ensure stops contains at least numStops elements.
-				mYAxis.mEntries = new float[labelCount];
-			}
+        boolean centeringEnabled = mAxis.isCenterAxisLabelsEnabled();
+        int n = centeringEnabled ? 1 : 0;
 
-			float v = min;
+        // force label count
+        if (mAxis.isForceLabelsEnabled()) {
 
-			for (int i = 0; i < labelCount; i++) {
-				mYAxis.mEntries[i] = v;
-				v += step;
-			}
+            float step = (float) range / (float) (labelCount - 1);
+            mAxis.mEntryCount = labelCount;
 
-			// no forced count
-		} else {
+            if (mAxis.mEntries.length < labelCount) {
+                // Ensure stops contains at least numStops elements.
+                mAxis.mEntries = new float[labelCount];
+            }
 
-			// if the labels should only show min and max
-			if (mYAxis.isShowOnlyMinMaxEnabled()) {
+            float v = min;
 
-				mYAxis.mEntryCount = 2;
-				mYAxis.mEntries = new float[2];
-				mYAxis.mEntries[0] = yMin;
-				mYAxis.mEntries[1] = yMax;
+            for (int i = 0; i < labelCount; i++) {
+                mAxis.mEntries[i] = v;
+                v += step;
+            }
 
-			} else {
+            n = labelCount;
 
-				final double rawCount = yMin / interval;
-				double first = rawCount < 0.0 ? Math.floor(rawCount) * interval : Math.ceil(rawCount) * interval;
+            // no forced count
+        } else {
 
-				if (first < yMin && mYAxis.isStartAtZeroEnabled()) {
-					// Force the first label to be at the 0 (or smallest negative value)
-					first = yMin;
-				}
+            double first = interval == 0.0 ? 0.0 : Math.ceil(yMin / interval) * interval;
+            if (centeringEnabled) {
+                first -= interval;
+            }
 
-				if (first == 0.0) // Fix for IEEE negative zero case (Where value == -0.0, and 0.0 == -0.0)
-					first = 0.0;
+            double last = interval == 0.0 ? 0.0 : Utils.nextUp(Math.floor(yMax / interval) * interval);
 
-				double last = Utils.nextUp(Math.floor(yMax / interval) * interval);
+            double f;
+            int i;
 
-				double f;
-				int i;
-				int n = 0;
-				for (f = first; f <= last; f += interval) {
-					++n;
-				}
+            if (interval != 0.0) {
+                for (f = first; f <= last; f += interval) {
+                    ++n;
+                }
+            }
 
-				if (Float.isNaN(mYAxis.getAxisMaxValue()))
-					n += 1;
+            n++;
 
-				mYAxis.mEntryCount = n;
+            mAxis.mEntryCount = n;
 
-				if (mYAxis.mEntries.length < n) {
-					// Ensure stops contains at least numStops elements.
-					mYAxis.mEntries = new float[n];
-				}
+            if (mAxis.mEntries.length < n) {
+                // Ensure stops contains at least numStops elements.
+                mAxis.mEntries = new float[n];
+            }
 
-				for (f = first, i = 0; i < n; f += interval, ++i) {
-					mYAxis.mEntries[i] = (float) f;
-				}
-			}
-		}
+            for (f = first, i = 0; i < n; f += interval, ++i) {
 
-		if (interval < 1) {
-			mYAxis.mDecimals = (int) Math.ceil(-Math.log10(interval));
-		} else {
-			mYAxis.mDecimals = 0;
-		}
+                if (f == 0.0) // Fix for negative zero case (Where value == -0.0, and 0.0 == -0.0)
+                    f = 0.0;
 
-		if (!mYAxis.isStartAtZeroEnabled() && mYAxis.mEntries[0] < yMin) {
-			// If startAtZero is disabled, and the first label is lower that the axis minimum,
-			// Then adjust the axis minimum
-			mYAxis.mAxisMinimum = mYAxis.mEntries[0];
-		}
+                mAxis.mEntries[i] = (float) f;
+            }
+        }
 
-		mYAxis.mAxisMaximum = mYAxis.mEntries[mYAxis.mEntryCount - 1];
-		mYAxis.mAxisRange = Math.abs(mYAxis.mAxisMaximum - mYAxis.mAxisMinimum);
-	}
+        // set decimals
+        if (interval < 1) {
+            mAxis.mDecimals = (int) Math.ceil(-Math.log10(interval));
+        } else {
+            mAxis.mDecimals = 0;
+        }
 
-	@Override
-	public void renderAxisLabels(Canvas c) {
+        if (centeringEnabled) {
 
-		if (!mYAxis.isEnabled() || !mYAxis.isDrawLabelsEnabled())
-			return;
+            if (mAxis.mCenteredEntries.length < n) {
+                mAxis.mCenteredEntries = new float[n];
+            }
 
-		mAxisLabelPaint.setTypeface(mYAxis.getTypeface());
-		mAxisLabelPaint.setTextSize(mYAxis.getTextSize());
-		mAxisLabelPaint.setColor(mYAxis.getTextColor());
+            float offset = (mAxis.mEntries[1] - mAxis.mEntries[0]) / 2f;
 
-		PointF center = mChart.getCenterOffsets();
-		float factor = mChart.getFactor();
+            for (int i = 0; i < n; i++) {
+                mAxis.mCenteredEntries[i] = mAxis.mEntries[i] + offset;
+            }
+        }
 
-		int labelCount = mYAxis.mEntryCount;
+        mAxis.mAxisMinimum = mAxis.mEntries[0];
+        mAxis.mAxisMaximum = mAxis.mEntries[n-1];
+        mAxis.mAxisRange = Math.abs(mAxis.mAxisMaximum - mAxis.mAxisMinimum);
+    }
 
-		for (int j = 0; j < labelCount; j++) {
+    @Override
+    public void renderAxisLabels(Canvas c) {
 
-			if (j == labelCount - 1 && mYAxis.isDrawTopYLabelEntryEnabled() == false)
-				break;
+        if (!mYAxis.isEnabled() || !mYAxis.isDrawLabelsEnabled())
+            return;
 
-			float r = (mYAxis.mEntries[j] - mYAxis.mAxisMinimum) * factor;
+        mAxisLabelPaint.setTypeface(mYAxis.getTypeface());
+        mAxisLabelPaint.setTextSize(mYAxis.getTextSize());
+        mAxisLabelPaint.setColor(mYAxis.getTextColor());
 
-			PointF p = Utils.getPosition(center, r, mChart.getRotationAngle());
+        MPPointF center = mChart.getCenterOffsets();
+        MPPointF pOut = MPPointF.getInstance(0,0);
+        float factor = mChart.getFactor();
 
-			String label = mYAxis.getFormattedLabel(j);
+        int labelCount = mYAxis.mEntryCount;
 
-			c.drawText(label, p.x + 10, p.y, mAxisLabelPaint);
-		}
-	}
+        for (int j = 0; j < labelCount; j++) {
 
-	@Override
-	public void renderLimitLines(Canvas c) {
+            if (j == labelCount - 1 && mYAxis.isDrawTopYLabelEntryEnabled() == false)
+                break;
 
-		List<LimitLine> limitLines = mYAxis.getLimitLines();
+            float r = (mYAxis.mEntries[j] - mYAxis.mAxisMinimum) * factor;
 
-		if (limitLines == null)
-			return;
+            Utils.getPosition(center, r, mChart.getRotationAngle(), pOut);
 
-		float sliceangle = mChart.getSliceAngle();
+            String label = mYAxis.getFormattedLabel(j);
 
-		// calculate the factor that is needed for transforming the value to
-		// pixels
-		float factor = mChart.getFactor();
+            c.drawText(label, pOut.x + 10, pOut.y, mAxisLabelPaint);
+        }
+        MPPointF.recycleInstance(center);
+        MPPointF.recycleInstance(pOut);
+    }
 
-		PointF center = mChart.getCenterOffsets();
+    private Path mRenderLimitLinesPathBuffer = new Path();
+    @Override
+    public void renderLimitLines(Canvas c) {
 
-		for (int i = 0; i < limitLines.size(); i++) {
+        List<LimitLine> limitLines = mYAxis.getLimitLines();
 
-			LimitLine l = limitLines.get(i);
+        if (limitLines == null)
+            return;
 
-			mLimitLinePaint.setColor(l.getLineColor());
-			mLimitLinePaint.setPathEffect(l.getDashPathEffect());
-			mLimitLinePaint.setStrokeWidth(l.getLineWidth());
+        float sliceangle = mChart.getSliceAngle();
 
-			float r = (l.getLimit() - mChart.getYChartMin()) * factor;
+        // calculate the factor that is needed for transforming the value to
+        // pixels
+        float factor = mChart.getFactor();
 
-			Path limitPath = new Path();
+        MPPointF center = mChart.getCenterOffsets();
+        MPPointF pOut = MPPointF.getInstance(0,0);
+        for (int i = 0; i < limitLines.size(); i++) {
 
-			for (int j = 0; j < mChart.getData().getXValCount(); j++) {
+            LimitLine l = limitLines.get(i);
 
-				PointF p = Utils.getPosition(center, r, sliceangle * j + mChart.getRotationAngle());
+            if (!l.isEnabled())
+                continue;
 
-				if (j == 0)
-					limitPath.moveTo(p.x, p.y);
-				else
-					limitPath.lineTo(p.x, p.y);
-			}
+            mLimitLinePaint.setColor(l.getLineColor());
+            mLimitLinePaint.setPathEffect(l.getDashPathEffect());
+            mLimitLinePaint.setStrokeWidth(l.getLineWidth());
 
-			limitPath.close();
+            float r = (l.getLimit() - mChart.getYChartMin()) * factor;
 
-			c.drawPath(limitPath, mLimitLinePaint);
-		}
-	}
+            Path limitPath = mRenderLimitLinesPathBuffer;
+            limitPath.reset();
+
+
+            for (int j = 0; j < mChart.getData().getMaxEntryCountSet().getEntryCount(); j++) {
+
+                Utils.getPosition(center, r, sliceangle * j + mChart.getRotationAngle(), pOut);
+
+                if (j == 0)
+                    limitPath.moveTo(pOut.x, pOut.y);
+                else
+                    limitPath.lineTo(pOut.x, pOut.y);
+            }
+            limitPath.close();
+
+            c.drawPath(limitPath, mLimitLinePaint);
+        }
+        MPPointF.recycleInstance(center);
+        MPPointF.recycleInstance(pOut);
+    }
 }

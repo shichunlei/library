@@ -8,11 +8,12 @@ import android.graphics.Paint.Align;
 import android.graphics.Paint.Style;
 
 import com.github.mikephil.charting.animation.ChartAnimator;
-import com.github.mikephil.charting.data.DataSet;
 import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.highlight.Highlight;
-import com.github.mikephil.charting.utils.Utils;
 import com.github.mikephil.charting.formatter.ValueFormatter;
+import com.github.mikephil.charting.highlight.Highlight;
+import com.github.mikephil.charting.interfaces.dataprovider.ChartInterface;
+import com.github.mikephil.charting.interfaces.datasets.IDataSet;
+import com.github.mikephil.charting.utils.Utils;
 import com.github.mikephil.charting.utils.ViewPortHandler;
 
 /**
@@ -65,6 +66,11 @@ public abstract class DataRenderer extends Renderer {
         mHighlightPaint.setColor(Color.rgb(255, 187, 115));
     }
 
+    protected boolean isDrawingValuesAllowed(ChartInterface chart) {
+        return chart.getData().getEntryCount() < chart.getMaxVisibleCount()
+                * mViewPortHandler.getScaleX();
+    }
+
     /**
      * Returns the Paint object this renderer uses for drawing the values
      * (value-text).
@@ -100,9 +106,9 @@ public abstract class DataRenderer extends Renderer {
      *
      * @param set
      */
-    protected void applyValueTextStyle(DataSet<?> set) {
+    @SuppressWarnings("rawtypes")
+	protected void applyValueTextStyle(IDataSet set) {
 
-        mValuePaint.setColor(set.getValueTextColor());
         mValuePaint.setTypeface(set.getValueTypeface());
         mValuePaint.setTextSize(set.getValueTextSize());
     }
@@ -138,8 +144,10 @@ public abstract class DataRenderer extends Renderer {
      * @param dataSetIndex the index of the DataSet the drawn Entry belongs to
      * @param x            position
      * @param y            position
+     * @param color
      */
-    public void drawValue(Canvas c, ValueFormatter formatter, float value, Entry entry, int dataSetIndex, float x, float y) {
+    public void drawValue(Canvas c, ValueFormatter formatter, float value, Entry entry, int dataSetIndex, float x, float y, int color) {
+        mValuePaint.setColor(color);
         c.drawText(formatter.getFormattedValue(value, entry, dataSetIndex, mViewPortHandler), x, y, mValuePaint);
     }
 
