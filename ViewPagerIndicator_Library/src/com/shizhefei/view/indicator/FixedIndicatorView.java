@@ -1,14 +1,12 @@
 package com.shizhefei.view.indicator;
 
-import java.util.LinkedList;
-import java.util.List;
-
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.support.v4.view.ViewCompat;
+import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
-
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Interpolator;
@@ -18,553 +16,547 @@ import android.widget.Scroller;
 import com.shizhefei.view.indicator.slidebar.ScrollBar;
 import com.shizhefei.view.indicator.slidebar.ScrollBar.Gravity;
 
+import java.util.LinkedList;
+import java.util.List;
+
 public class FixedIndicatorView extends LinearLayout implements Indicator {
 
-	private IndicatorAdapter mAdapter;
+    private IndicatorAdapter mAdapter;
 
-	private OnItemSelectedListener onItemSelectedListener;
+    private OnItemSelectedListener onItemSelectedListener;
 
-	private int mSelectedTabIndex = -1;
+    private int mSelectedTabIndex = -1;
 
-	public static final int SPLITMETHOD_EQUALS = 0;
-	public static final int SPLITMETHOD_WEIGHT = 1;
-	public static final int SPLITMETHOD_WRAP = 2;
+    public static final int SPLITMETHOD_EQUALS = 0;
+    public static final int SPLITMETHOD_WEIGHT = 1;
+    public static final int SPLITMETHOD_WRAP = 2;
 
-	private int splitMethod = SPLITMETHOD_EQUALS;
-	private boolean isSplitAuto;
+    private int splitMethod = SPLITMETHOD_EQUALS;
+    private int state = ViewPager.SCROLL_STATE_IDLE;
 
-	public FixedIndicatorView(Context context) {
-		super(context);
-		init();
-	}
+    public FixedIndicatorView(Context context) {
+        super(context);
+        init();
+    }
 
-	@SuppressLint("NewApi")
-	public FixedIndicatorView(Context context, AttributeSet attrs, int defStyle) {
-		super(context, attrs, defStyle);
-		init();
-	}
+    @SuppressLint("NewApi")
+    public FixedIndicatorView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+        init();
+    }
 
-	public FixedIndicatorView(Context context, AttributeSet attrs) {
-		super(context, attrs);
-		init();
-	}
+    public FixedIndicatorView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init();
+    }
 
-	private void init() {
-		inRun = new InRun();
-	}
+    private void init() {
+        inRun = new InRun();
+    }
 
-	@Override
-	protected void onDetachedFromWindow() {
-		super.onDetachedFromWindow();
-		inRun.stop();
-	}
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        inRun.stop();
+    }
 
-	@Override
-	public void setAdapter(IndicatorAdapter adapter) {
-		if (this.mAdapter != null) {
-			this.mAdapter.unRegistDataSetObserver(dataSetObserver);
-		}
-		this.mAdapter = adapter;
-		adapter.registDataSetObserver(dataSetObserver);
-		adapter.notifyDataSetChanged();
-	}
+    @Override
+    public void setAdapter(IndicatorAdapter adapter) {
+        if (this.mAdapter != null) {
+            this.mAdapter.unRegistDataSetObserver(dataSetObserver);
+        }
+        this.mAdapter = adapter;
+        adapter.registDataSetObserver(dataSetObserver);
+        adapter.notifyDataSetChanged();
+    }
 
-	@Override
-	public void setOnItemSelectListener(OnItemSelectedListener onItemSelectedListener) {
-		this.onItemSelectedListener = onItemSelectedListener;
-	}
+    public ScrollBar getScrollBar() {
+        return scrollBar;
+    }
 
-	@Override
-	public IndicatorAdapter getAdapter() {
-		return mAdapter;
-	}
+    @Override
+    public void setOnItemSelectListener(OnItemSelectedListener onItemSelectedListener) {
+        this.onItemSelectedListener = onItemSelectedListener;
+    }
 
-	@Override
-	public void setCurrentItem(int item) {
-		setCurrentItem(item, true);
-	}
+    public IndicatorAdapter getIndicatorAdapter() {
+        return mAdapter;
+    }
 
-	private int mPreSelectedTabIndex = -1;
+    @Override
+    public void setCurrentItem(int item) {
+        setCurrentItem(item, true);
+    }
 
-	@Override
-	public void setCurrentItem(int item, boolean anim) {
-		int count = getCount();
-		if (count == 0) {
-			return;
-		}
-		if (item < 0) {
-			item = 0;
-		} else if (item > count - 1) {
-			item = count - 1;
-		}
-		if (mSelectedTabIndex != item) {
-			mPreSelectedTabIndex = mSelectedTabIndex;
-			mSelectedTabIndex = item;
-			final int tabCount = mAdapter.getCount();
-			for (int i = 0; i < tabCount; i++) {
-				final ViewGroup group = (ViewGroup) getChildAt(i);
-				View child = group.getChildAt(0);
-				final boolean isSelected = (i == item);
-				child.setSelected(isSelected);
-			}
+    private int mPreSelectedTabIndex = -1;
 
-			if (!inRun.isFinished()) {
-				inRun.stop();
-			}
-			if (positionOffset < 0.02f || positionOffset > 0.98f || !anim) {
-				notifyPageScrolled(item, 0, 0);
-				initNotifyOnPageScrollListener();
-			}
-			if (getWidth() != 0 && anim && mPositionOffset < 0.01f && mPreSelectedTabIndex >= 0 && mPreSelectedTabIndex < getChildCount()) {
-				int sx = getChildAt(mPreSelectedTabIndex).getLeft();
-				int ex = getChildAt(item).getLeft();
-				final float pageDelta = (float) Math.abs(ex - sx) / (getChildAt(item).getWidth());
-				int duration = (int) ((pageDelta + 1) * 100);
-				duration = Math.min(duration, 600);
-				inRun.startScroll(sx, ex, duration);
-			}
-		}
-	}
+    @Override
+    public void setCurrentItem(int item, boolean anim) {
+        int count = getCount();
+        if (count == 0) {
+            return;
+        }
+        if (item < 0) {
+            item = 0;
+        } else if (item > count - 1) {
+            item = count - 1;
+        }
+        if (mSelectedTabIndex != item) {
+            mPreSelectedTabIndex = mSelectedTabIndex;
+            mSelectedTabIndex = item;
 
-	private void initNotifyOnPageScrollListener() {
-		int tabCount;
-		if (mAdapter != null && (tabCount = mAdapter.getCount()) > 1) {
-			if (onPageScrollListener != null && tabCount > 1) {
-				if (mPreSelectedTabIndex >= 0) {
-					View view1 = getItemView(mPreSelectedTabIndex);
-					if (view1 != null) {
-						onPageScrollListener.onTransition(view1, mPreSelectedTabIndex, 0);
-					}
-				}
-				if (mSelectedTabIndex >= 0) {
-					View view1 = getItemView(mSelectedTabIndex);
-					if (view1 != null) {
-						onPageScrollListener.onTransition(view1, mSelectedTabIndex, 1);
-					}
-				}
-			}
-		}
-	}
+            if (!inRun.isFinished()) {
+                inRun.stop();
+            }
+            if (state == ViewPager.SCROLL_STATE_IDLE) {
+                updateTabSelectState(item);
+                if (anim && getWidth() != 0 && mPreSelectedTabIndex >= 0 && mPreSelectedTabIndex < getChildCount()) {
+                    int sx = getChildAt(mPreSelectedTabIndex).getLeft();
+                    int ex = getChildAt(item).getLeft();
+                    final float pageDelta = (float) Math.abs(ex - sx) / (getChildAt(item).getWidth());
+                    int duration = (int) ((pageDelta + 1) * 100);
+                    duration = Math.min(duration, 600);
+                    inRun.startScroll(sx, ex, duration);
+                } else {
+                    notifyPageScrolled(item, 0, 0);
+                }
+            } else {
+                if (onTransitionListener == null) {
+                    updateTabSelectState(item);
+                }
+            }
+        }
+    }
 
-	@Override
-	public int getCurrentItem() {
-		return mSelectedTabIndex;
-	}
+    private void updateTabSelectState(int selectItem) {
+        View preview = getItemView(mPreSelectedTabIndex);
+        if (preview != null) {
+            preview.setSelected(false);
+        }
+        View selectView = getItemView(selectItem);
+        if (selectView != null) {
+            selectView.setSelected(true);
+        }
+    }
 
-	private List<ViewGroup> views = new LinkedList<ViewGroup>();
+    @Override
+    public int getCurrentItem() {
+        return mSelectedTabIndex;
+    }
 
-	private DataSetObserver dataSetObserver = new DataSetObserver() {
-		@Override
-		public void onChange() {
-			if (!inRun.isFinished()) {
-				inRun.stop();
-			}
-			positionOffset = 0;
-			int count = getChildCount();
-			int newCount = mAdapter.getCount();
-			views.clear();
-			for (int i = 0; i < count && i < newCount; i++) {
-				views.add((ViewGroup) getChildAt(i));
-			}
-			removeAllViews();
-			int size = views.size();
-			for (int i = 0; i < newCount; i++) {
-				LinearLayout result = new LinearLayout(getContext());
-				View view;
-				if (i < size) {
-					View temp = views.get(i).getChildAt(0);
-					views.get(i).removeView(temp);
-					view = mAdapter.getView(i, temp, result);
-				} else {
-					view = mAdapter.getView(i, null, result);
-				}
-				result.addView(view);
-				result.setOnClickListener(onClickListener);
-				result.setTag(i);
-				addView(result, new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT));
-			}
-			mPreSelectedTabIndex = -1;
-			setCurrentItem(mSelectedTabIndex, false);
-			measureTabs();
-		}
-	};
+    private List<ViewGroup> views = new LinkedList<ViewGroup>();
 
-	public void setSplitMethod(int splitMethod) {
-		this.isSplitAuto = false;
-		setSplitMethod_(splitMethod);
-	}
+    private DataSetObserver dataSetObserver = new DataSetObserver() {
+        @Override
+        public void onChange() {
+            if (!inRun.isFinished()) {
+                inRun.stop();
+            }
+            int count = getChildCount();
+            int newCount = mAdapter.getCount();
+            views.clear();
+            for (int i = 0; i < count && i < newCount; i++) {
+                views.add((ViewGroup) getChildAt(i));
+            }
+            removeAllViews();
+            int size = views.size();
+            for (int i = 0; i < newCount; i++) {
+                LinearLayout result = new LinearLayout(getContext());
+                View view;
+                if (i < size) {
+                    View temp = views.get(i).getChildAt(0);
+                    views.get(i).removeView(temp);
+                    view = mAdapter.getView(i, temp, result);
+                } else {
+                    view = mAdapter.getView(i, null, result);
+                }
+                if (onTransitionListener != null) {
+                    onTransitionListener.onTransition(view, i, i == mSelectedTabIndex ? 1 : 0);
+                }
+                result.addView(view);
+                result.setOnClickListener(onClickListener);
+                result.setTag(i);
+                addView(result, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT));
+            }
+            mPreSelectedTabIndex = -1;
+            setCurrentItem(mSelectedTabIndex, false);
+            measureTabs();
+        }
+    };
 
-	private void setSplitMethod_(int splitMethod) {
-		this.splitMethod = splitMethod;
-		measureTabs();
-	}
+    public void setSplitMethod(int splitMethod) {
+        this.splitMethod = splitMethod;
+        measureTabs();
+    }
 
-	boolean isSplitAuto() {
-		return isSplitAuto;
-	}
+    public int getSplitMethod() {
+        return splitMethod;
+    }
 
-	void setSplitMethodAuto() {
-		this.isSplitAuto = true;
-		invalidate();
-	}
+    private OnClickListener onClickListener = new OnClickListener() {
 
-	public int getSplitMethod() {
-		return splitMethod;
-	}
+        @Override
+        public void onClick(View v) {
+            int i = (Integer) v.getTag();
+            ViewGroup parent = (ViewGroup) v;
+            setCurrentItem(i);
+            if (onItemSelectedListener != null) {
+                onItemSelectedListener.onItemSelected(parent.getChildAt(0), i, mPreSelectedTabIndex);
+            }
+        }
+    };
 
-	private OnClickListener onClickListener = new OnClickListener() {
+    private ScrollBar scrollBar;
 
-		@Override
-		public void onClick(View v) {
-			int i = (Integer) v.getTag();
-			ViewGroup parent = (ViewGroup) v;
-			setCurrentItem(i);
-			if (onItemSelectedListener != null) {
-				onItemSelectedListener.onItemSelected(parent.getChildAt(0), i, mPreSelectedTabIndex);
-			}
-		}
-	};
+    @Override
+    public void setScrollBar(ScrollBar scrollBar) {
+        int paddingBottom = getPaddingBottom();
+        int paddingTop = getPaddingTop();
+        if (this.scrollBar != null) {
+            switch (this.scrollBar.getGravity()) {
+                case BOTTOM_FLOAT:
+                    paddingBottom = paddingBottom - scrollBar.getHeight(getHeight());
+                    break;
 
-	private ScrollBar scrollBar;
+                case TOP_FLOAT:
+                    paddingTop = paddingTop - scrollBar.getHeight(getHeight());
+                    break;
+                default:
+                    break;
+            }
+        }
+        this.scrollBar = scrollBar;
+        switch (this.scrollBar.getGravity()) {
+            case BOTTOM_FLOAT:
+                paddingBottom = paddingBottom + scrollBar.getHeight(getHeight());
+                break;
 
-	@Override
-	public void setScrollBar(ScrollBar scrollBar) {
-		int paddingBottom = getPaddingBottom();
-		int paddingTop = getPaddingTop();
-		if (this.scrollBar != null) {
-			switch (this.scrollBar.getGravity()) {
-			case BOTTOM_FLOAT:
-				paddingBottom = paddingBottom - scrollBar.getHeight(getHeight());
-				break;
+            case TOP_FLOAT:
+                paddingTop = paddingTop + scrollBar.getHeight(getHeight());
+                break;
+            default:
+                break;
+        }
+        setPadding(getPaddingLeft(), paddingTop, getPaddingRight(), paddingBottom);
+        // measureScrollBar(true);
+    }
 
-			case TOP_FLOAT:
-				paddingTop = paddingTop - scrollBar.getHeight(getHeight());
-				break;
-			default:
-				break;
-			}
-		}
-		this.scrollBar = scrollBar;
-		switch (this.scrollBar.getGravity()) {
-		case BOTTOM_FLOAT:
-			paddingBottom = paddingBottom + scrollBar.getHeight(getHeight());
-			break;
+    private InRun inRun;
 
-		case TOP_FLOAT:
-			paddingTop = paddingTop + scrollBar.getHeight(getHeight());
-			break;
-		default:
-			break;
-		}
-		setPadding(getPaddingLeft(), paddingTop, getPaddingRight(), paddingBottom);
-		// measureScrollBar(true);
-	}
+    private class InRun implements Runnable {
+        private int updateTime = 20;
 
-	private InRun inRun;
+        private Scroller scroller;
+        private final Interpolator sInterpolator = new Interpolator() {
+            public float getInterpolation(float t) {
+                t -= 1.0f;
+                return t * t * t * t * t + 1.0f;
+            }
+        };
 
-	private class InRun implements Runnable {
-		private int updateTime = 20;
+        public InRun() {
+            super();
+            scroller = new Scroller(getContext(), sInterpolator);
+        }
 
-		private Scroller scroller;
-		private final Interpolator sInterpolator = new Interpolator() {
-			public float getInterpolation(float t) {
-				t -= 1.0f;
-				return t * t * t * t * t + 1.0f;
-			}
-		};
+        public void startScroll(int startX, int endX, int dration) {
+            scroller.startScroll(startX, 0, endX - startX, 0, dration);
+            ViewCompat.postInvalidateOnAnimation(FixedIndicatorView.this);
+            post(this);
+        }
 
-		public InRun() {
-			super();
-			scroller = new Scroller(getContext(), sInterpolator);
-		}
+        public boolean isFinished() {
+            return scroller.isFinished();
+        }
 
-		public void startScroll(int startX, int endX, int dration) {
-			scroller.startScroll(startX, 0, endX - startX, 0, dration);
-			ViewCompat.postInvalidateOnAnimation(FixedIndicatorView.this);
-			post(this);
-		}
+        public boolean computeScrollOffset() {
+            return scroller.computeScrollOffset();
+        }
 
-		public boolean isFinished() {
-			return scroller.isFinished();
-		}
+        public int getCurrentX() {
+            return scroller.getCurrX();
+        }
 
-		public boolean computeScrollOffset() {
-			return scroller.computeScrollOffset();
-		}
+        public void stop() {
+            if (scroller.isFinished()) {
+                scroller.abortAnimation();
+            }
+            removeCallbacks(this);
+        }
 
-		public int getCurrentX() {
-			return scroller.getCurrX();
-		}
+        @Override
+        public void run() {
+            ViewCompat.postInvalidateOnAnimation(FixedIndicatorView.this);
+            if (!scroller.isFinished()) {
+                postDelayed(this, updateTime);
+            }
+        }
+    }
 
-		public void stop() {
-			if (scroller.isFinished()) {
-				scroller.abortAnimation();
-			}
-			removeCallbacks(this);
-		}
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        if (scrollBar != null && scrollBar.getGravity() == Gravity.CENTENT_BACKGROUND) {
+            drawSlideBar(canvas);
+        }
+        super.dispatchDraw(canvas);
+        if (scrollBar != null && scrollBar.getGravity() != Gravity.CENTENT_BACKGROUND) {
+            drawSlideBar(canvas);
+        }
+    }
 
-		@Override
-		public void run() {
-			ViewCompat.postInvalidateOnAnimation(FixedIndicatorView.this);
-			if (!scroller.isFinished()) {
-				postDelayed(this, updateTime);
-			}
-		}
-	}
+    private void drawSlideBar(Canvas canvas) {
+        if (mAdapter == null || scrollBar == null) {
+            inRun.stop();
+            return;
+        }
+        final int count = mAdapter.getCount();
+        if (count == 0) {
+            inRun.stop();
+            return;
+        }
+        if (getCurrentItem() >= count) {
+            setCurrentItem(count - 1);
+            inRun.stop();
+            return;
+        }
+        float offsetX = 0;
+        int offsetY = 0;
+        switch (this.scrollBar.getGravity()) {
+            case CENTENT_BACKGROUND:
+            case CENTENT:
+                offsetY = (getHeight() - scrollBar.getHeight(getHeight())) / 2;
+                break;
+            case TOP:
+            case TOP_FLOAT:
+                offsetY = 0;
+                break;
+            case BOTTOM:
+            case BOTTOM_FLOAT:
+            default:
+                offsetY = getHeight() - scrollBar.getHeight(getHeight());
+                break;
+        }
+        int tabWidth;
+        View currentView = null;
+        Log.d("pppp", "state:" + state);
+        if (!inRun.isFinished() && inRun.computeScrollOffset()) {
+            offsetX = inRun.getCurrentX();
+            int position = 0;
+            for (int i = 0; i < count; i++) {
+                currentView = getChildAt(i);
+                if (currentView.getLeft() <= offsetX && offsetX < currentView.getRight()) {
+                    position = i;
+                    break;
+                }
+            }
+            int width = currentView.getWidth();
+            int positionOffsetPixels = (int) (offsetX - currentView.getLeft());
+            float positionOffset = (offsetX - currentView.getLeft()) / width;
+            notifyPageScrolled(position, positionOffset, positionOffsetPixels);
+            tabWidth = measureScrollBar(position, positionOffset, true);
 
-	@Override
-	protected void dispatchDraw(Canvas canvas) {
-		if (scrollBar != null && scrollBar.getGravity() == Gravity.CENTENT_BACKGROUND) {
-			drawSlideBar(canvas);
-		}
-		super.dispatchDraw(canvas);
-		if (scrollBar != null && scrollBar.getGravity() != Gravity.CENTENT_BACKGROUND) {
-			drawSlideBar(canvas);
-		}
-	}
+            Log.d("pppp", "1:" + " mPosition:" + position + " offsetX:" + offsetX);
+        } else if (state != ViewPager.SCROLL_STATE_IDLE) {
+            currentView = getChildAt(mPosition);
+            int width = currentView.getWidth();
+            offsetX = currentView.getLeft() + width * mPositionOffset;
+            notifyPageScrolled(mPosition, mPositionOffset, mPositionOffsetPixels);
+            tabWidth = measureScrollBar(mPosition, mPositionOffset, true);
 
-	private void drawSlideBar(Canvas canvas) {
-		if (mAdapter == null || scrollBar == null) {
-			return;
-		}
-		final int count = mAdapter.getCount();
-		if (count == 0) {
-			return;
-		}
-		if (getCurrentItem() >= count) {
-			setCurrentItem(count - 1);
-			return;
-		}
-		float offsetX = 0;
-		int offsetY = 0;
-		switch (this.scrollBar.getGravity()) {
-		case CENTENT_BACKGROUND:
-		case CENTENT:
-			offsetY = (getHeight() - scrollBar.getHeight(getHeight())) / 2;
-			break;
-		case TOP:
-		case TOP_FLOAT:
-			offsetY = 0;
-			break;
-		case BOTTOM:
-		case BOTTOM_FLOAT:
-		default:
-			offsetY = getHeight() - scrollBar.getHeight(getHeight());
-			break;
-		}
-		View currentView = null;
-		if (!inRun.isFinished() && inRun.computeScrollOffset()) {
-			offsetX = inRun.getCurrentX();
-			int position = 0;
-			for (int i = 0; i < count; i++) {
-				currentView = getChildAt(i);
-				if (currentView.getLeft() <= offsetX && offsetX < currentView.getRight()) {
-					position = i;
-					break;
-				}
-			}
-			int width = currentView.getWidth();
-			int positionOffsetPixels = (int) (offsetX - currentView.getLeft());
-			float positionOffset = (offsetX - currentView.getLeft()) / width;
-			notifyPageScrolled(position, positionOffset, positionOffsetPixels);
-		} else if (mPositionOffset > 0.001f) {
-			currentView = getChildAt(mPosition);
-			int width = currentView.getWidth();
-			offsetX = currentView.getLeft() + width * mPositionOffset;
-			notifyPageScrolled(mPosition, mPositionOffset, mPositionOffsetPixels);
-		} else {
-			currentView = getChildAt(mPosition);
-			if (currentView == null) {
-				return;
-			}
-			offsetX = currentView.getLeft();
-		}
-		int tabWidth = measureScrollBar(mPosition, mPositionOffset, true);
-		int width = scrollBar.getSlideView().getWidth();
-		offsetX += (tabWidth - width) / 2;
-		int saveCount = canvas.save();
-		canvas.translate(offsetX, offsetY);
-		canvas.clipRect(0, 0, width, scrollBar.getSlideView().getHeight()); // needed
-		scrollBar.getSlideView().draw(canvas);
-		canvas.restoreToCount(saveCount);
-	}
+            Log.d("pppp", "2:" + " mPosition:" + mPosition + " offsetX:" + offsetX);
+        } else {
+            tabWidth = measureScrollBar(mSelectedTabIndex, 0, true);
+            currentView = getChildAt(mSelectedTabIndex);
+            if (currentView == null) {
+                return;
+            }
+            offsetX = currentView.getLeft();
 
-	private int[] prePositions = { -1, -1 };
-	private float positionOffset;
+            Log.d("pppp", "3:" + " mSelectedTabIndex:" + mSelectedTabIndex + " offsetX:" + offsetX);
+        }
+        if (inRun.isFinished()) {
+            inRun.stop();
+        }
+        int width = scrollBar.getSlideView().getWidth();
+        offsetX += (tabWidth - width) / 2;
+        int saveCount = canvas.save();
+        canvas.translate(offsetX, offsetY);
+        canvas.clipRect(0, 0, width, scrollBar.getSlideView().getHeight()); // needed
+        scrollBar.getSlideView().draw(canvas);
+        canvas.restoreToCount(saveCount);
 
-	private void notifyPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-		if (position < 0 || position > getCount() - 1) {
-			return;
-		}
-		this.positionOffset = positionOffset;
-		if (scrollBar != null) {
-			scrollBar.onPageScrolled(position, positionOffset, positionOffsetPixels);
-		}
-		if (onPageScrollListener != null) {
-			for (int i : prePositions) {
-				if (i != position && i != position + 1) {
-					View view = getItemView(i);
-					if (view != null) {
-						onPageScrollListener.onTransition(view, i, 0);
-					}
-				}
-			}
-			prePositions[0] = position;
-			prePositions[1] = position + 1;
-			View view = getItemView(position);
-			onPageScrollListener.onTransition(view, position, 1 - positionOffset);
-			view = getItemView(position + 1);
-			if (view != null) {
-				onPageScrollListener.onTransition(view, position + 1, positionOffset);
-			}
+        inRun.stop();
+    }
 
-		}
-	}
+    private int[] prePositions = {-1, -1};
 
-	private int measureScrollBar(int position, float selectPercent, boolean needChange) {
-		if (scrollBar == null)
-			return 0;
-		View view = scrollBar.getSlideView();
-		if (view.isLayoutRequested() || needChange) {
-			View selectV = getChildAt(position);
-			View unSelectV = getChildAt(position + 1);
-			if (selectV != null) {
-				int width = (int) (selectV.getWidth() * (1 - selectPercent) + (unSelectV == null ? 0 : unSelectV.getWidth() * selectPercent));
-				view.layout(0, 0, scrollBar.getWidth(width), scrollBar.getHeight(getHeight()));
-				return width;
-			}
-		}
-		return scrollBar.getSlideView().getWidth();
-	}
+    private void notifyPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+        if (position < 0 || position > getCount() - 1) {
+            return;
+        }
+        if (scrollBar != null) {
+            scrollBar.onPageScrolled(position, positionOffset, positionOffsetPixels);
+        }
+        if (onTransitionListener != null) {
+            for (int i : prePositions) {
+                if (i != position && i != position + 1) {
+                    View view = getItemView(i);
+                    if (view != null) {
+                        onTransitionListener.onTransition(view, i, 0);
+                    }
+                }
+            }
+            prePositions[0] = position;
+            prePositions[1] = position + 1;
 
-	private void measureTabs() {
-		// int width = getMeasuredWidth();
-		int count = getChildCount();
-		// if (count == 0 || width == 0) {
-		// return;
-		// }
-		switch (splitMethod) {
-		case SPLITMETHOD_EQUALS:
-			for (int i = 0; i < count; i++) {
-				View view = getChildAt(i);
-				LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) view.getLayoutParams();
-				layoutParams.width = 0;
-				layoutParams.weight = 1;
-				view.setLayoutParams(layoutParams);
-			}
-			break;
-		case SPLITMETHOD_WRAP:
-			for (int i = 0; i < count; i++) {
-				View view = getChildAt(i);
-				LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) view.getLayoutParams();
-				layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT;
-				layoutParams.weight = 0;
-				view.setLayoutParams(layoutParams);
-			}
-			break;
-		case SPLITMETHOD_WEIGHT:
-			for (int i = 0; i < count; i++) {
-				View view = getChildAt(i);
-				LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) view.getLayoutParams();
-				layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT;
-				layoutParams.weight = 1;
-				view.setLayoutParams(layoutParams);
-			}
-			break;
-		}
-	}
+            View view = getItemView(mPreSelectedTabIndex);
+            if (view != null) {
+                onTransitionListener.onTransition(view, mPreSelectedTabIndex, 0);
+            }
 
-	public int getCount() {
-		if (mAdapter == null) {
-			return 0;
-		}
-		return mAdapter.getCount();
-	}
+            view = getItemView(position);
+            if (view != null) {
+                onTransitionListener.onTransition(view, position, 1 - positionOffset);
+            }
 
-	@Override
-	protected void measureChildren(int widthMeasureSpec, int heightMeasureSpec) {
-		super.measureChildren(widthMeasureSpec, heightMeasureSpec);
-	}
+            view = getItemView(position + 1);
+            if (view != null) {
+                onTransitionListener.onTransition(view, position + 1, positionOffset);
+            }
+        }
+    }
 
-	// 甯冨眬杩囩▼涓紝 鍏堣皟onMeasure璁＄畻姣忎釜child鐨勫ぇ灏忥紝 鐒跺悗璋冪敤onLayout瀵筩hild杩涜甯冨眬锛�
-	// onSizeChanged锛堬級瀹炲湪甯冨眬鍙戠敓鍙樺寲鏃剁殑鍥炶皟鍑芥暟锛岄棿鎺ュ洖鍘昏皟鐢╫nMeasure,
-	// onLayout鍑芥暟閲嶆柊甯冨眬
-	// 褰撳睆骞曟棆杞殑鏃跺�瀵艰嚧浜�甯冨眬鐨剆ize鏀瑰彉锛屾晠鑰屼細璋冪敤姝ゆ柟娉曘�
-	@Override
-	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-		super.onSizeChanged(w, h, oldw, oldh);
-		// 閲嶆柊璁＄畻娴姩鐨剉iew鐨勫ぇ灏�
-		measureScrollBar(mSelectedTabIndex, 1, true);
-	}
 
-	private int mPosition;
-	private int mPositionOffsetPixels;
+    private int measureScrollBar(int position, float selectPercent, boolean needChange) {
+        if (scrollBar == null)
+            return 0;
+        View view = scrollBar.getSlideView();
+        if (view.isLayoutRequested() || needChange) {
+            View selectV = getChildAt(position);
+            View unSelectV = getChildAt(position + 1);
+            if (selectV != null) {
+                int tabWidth = (int) (selectV.getWidth() * (1 - selectPercent) + (unSelectV == null ? 0 : unSelectV.getWidth() * selectPercent));
+                int width = scrollBar.getWidth(tabWidth);
+                int height = scrollBar.getHeight(getHeight());
+                view.measure(width, height);
+                view.layout(0, 0, width, height);
+                return tabWidth;
+            }
+        }
+        return scrollBar.getSlideView().getWidth();
+    }
 
-	@Override
-	public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-		this.mPosition = position;
-		this.mPositionOffset = positionOffset;
-		this.mPositionOffsetPixels = positionOffsetPixels;
-		if (scrollBar != null) {
-			ViewCompat.postInvalidateOnAnimation(this);
-		} else {
-			notifyPageScrolled(position, positionOffset, positionOffsetPixels);
-		}
-	}
+    private void measureTabs() {
+        int count = getChildCount();
+        switch (splitMethod) {
+            case SPLITMETHOD_EQUALS:
+                for (int i = 0; i < count; i++) {
+                    View view = getChildAt(i);
+                    LayoutParams layoutParams = (LayoutParams) view.getLayoutParams();
+                    layoutParams.width = 0;
+                    layoutParams.weight = 1;
+                    view.setLayoutParams(layoutParams);
+                }
+                break;
+            case SPLITMETHOD_WRAP:
+                for (int i = 0; i < count; i++) {
+                    View view = getChildAt(i);
+                    LayoutParams layoutParams = (LayoutParams) view.getLayoutParams();
+                    layoutParams.width = LayoutParams.WRAP_CONTENT;
+                    layoutParams.weight = 0;
+                    view.setLayoutParams(layoutParams);
+                }
+                break;
+            case SPLITMETHOD_WEIGHT:
+                for (int i = 0; i < count; i++) {
+                    View view = getChildAt(i);
+                    LayoutParams layoutParams = (LayoutParams) view.getLayoutParams();
+                    layoutParams.width = LayoutParams.WRAP_CONTENT;
+                    layoutParams.weight = 1;
+                    view.setLayoutParams(layoutParams);
+                }
+                break;
+        }
+    }
 
-	private float mPositionOffset;
+    public int getCount() {
+        if (mAdapter == null) {
+            return 0;
+        }
+        return mAdapter.getCount();
+    }
 
-	@Override
-	public void setOnTransitionListener(OnTransitionListener onPageScrollListener) {
-		this.onPageScrollListener = onPageScrollListener;
-		initNotifyOnPageScrollListener();
-	}
+    @Override
+    protected void measureChildren(int widthMeasureSpec, int heightMeasureSpec) {
+        super.measureChildren(widthMeasureSpec, heightMeasureSpec);
+    }
 
-	private OnTransitionListener onPageScrollListener;
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        measureScrollBar(mSelectedTabIndex, 1, true);
+    }
 
-	@Override
-	public View getItemView(int position) {
-		if (position < 0 || position > mAdapter.getCount() - 1) {
-			return null;
-		}
-		final ViewGroup group = (ViewGroup) getChildAt(position);
-		return group.getChildAt(0);
-	}
+    private int mPosition;
+    private int mPositionOffsetPixels;
 
-	@Override
-	public OnItemSelectedListener getOnItemSelectListener() {
-		return onItemSelectedListener;
-	}
+    @Override
+    public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+        this.mPosition = position;
+        this.mPositionOffset = positionOffset;
+        this.mPositionOffsetPixels = positionOffsetPixels;
+        if (scrollBar != null) {
+            ViewCompat.postInvalidateOnAnimation(this);
+        } else {
+            notifyPageScrolled(position, positionOffset, positionOffsetPixels);
+        }
+    }
 
-	@Override
-	public OnTransitionListener getOnTransitionListener() {
-		return onPageScrollListener;
-	}
+    @Override
+    public void onPageScrollStateChanged(int state) {
+        this.state = state;
+    }
 
-	@Override
-	public int getPreSelectItem() {
-		return mPreSelectedTabIndex;
-	}
+    private float mPositionOffset;
 
-	@Override
-	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-		if (isSplitAuto) {
-			int width = 0;
-			int layoutWidth = getMeasuredWidth();
-			for (int i = 0; i < getChildCount(); i++) {
-				View child = getChildAt(i);
-				child.measure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-				width = +child.getMeasuredWidth();
-				if (width > layoutWidth) {
-					break;
-				}
-			}
-			if (width >= layoutWidth) {
-				setSplitMethod_(SPLITMETHOD_EQUALS);
-			} else {
-				setSplitMethod_(SPLITMETHOD_WRAP);
-			}
-		}
-		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-	}
+    @Override
+    public void setOnTransitionListener(OnTransitionListener onTransitionListener) {
+        this.onTransitionListener = onTransitionListener;
+        updateTabSelectState(mSelectedTabIndex);
+        if (mAdapter != null) {
+            for (int i = 0; i < mAdapter.getCount(); i++) {
+                View tab = getItemView(i);
+                if (tab != null) {
+                    onTransitionListener.onTransition(tab, i, mSelectedTabIndex == i ? 1 : 0);
+                }
+            }
+        }
+    }
+
+    private OnTransitionListener onTransitionListener;
+
+    @Override
+    public View getItemView(int position) {
+        if (position < 0 || position > mAdapter.getCount() - 1) {
+            return null;
+        }
+        final ViewGroup group = (ViewGroup) getChildAt(position);
+        return group.getChildAt(0);
+    }
+
+    @Override
+    public OnItemSelectedListener getOnItemSelectListener() {
+        return onItemSelectedListener;
+    }
+
+    @Override
+    public OnTransitionListener getOnTransitionListener() {
+        return onTransitionListener;
+    }
+
+    @Override
+    public int getPreSelectItem() {
+        return mPreSelectedTabIndex;
+    }
+
 }

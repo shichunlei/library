@@ -15,18 +15,16 @@ limitations under the License.
  */
 package com.shizhefei.view.indicator;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.shizhefei.view.indicator.slidebar.ScrollBar;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
- * @author试着飞
- * @date 2014年11月1日
- * @version 1.0 指示器
+ * 指示器
  */
 public interface Indicator {
 	/**
@@ -44,7 +42,7 @@ public interface Indicator {
 	/**
 	 * 获取选中监听
 	 * 
-	 * @return
+	 * @return OnItemSelectedListener
 	 */
 	public OnItemSelectedListener getOnItemSelectListener();
 
@@ -72,7 +70,7 @@ public interface Indicator {
 	 */
 	public void setScrollBar(ScrollBar scrollBar);
 
-	public IndicatorAdapter getAdapter();
+	public IndicatorAdapter getIndicatorAdapter();
 
 	/**
 	 * 设置当前项.<br>
@@ -89,21 +87,21 @@ public interface Indicator {
 	 * 
 	 * @param item
 	 *            索引
-	 * @return
+	 * @return ItemView
 	 */
 	public View getItemView(int item);
 
 	/**
 	 * 获取当前选中项
 	 * 
-	 * @return
+	 * @return current
 	 */
 	public int getCurrentItem();
 
 	/**
 	 * 获取之前选中的项,可能返回-1，表示之前没有选中
 	 * 
-	 * @return
+	 * @return PreSelectItem
 	 */
 	public int getPreSelectItem();
 
@@ -121,7 +119,7 @@ public interface Indicator {
 	 * 
 	 */
 	public static abstract class IndicatorAdapter {
-		private Set<DataSetObserver> observers = new LinkedHashSet<Indicator.DataSetObserver>(2);
+		private Set<DataSetObserver> observers = new LinkedHashSet<DataSetObserver>(2);
 
 		public abstract int getCount();
 
@@ -145,10 +143,7 @@ public interface Indicator {
 
 	/**
 	 * 
-	 * 
-	 * @author试着飞
-	 * @date 2014年11月1日
-	 * @version 1.0 数据源观察者
+	 *  数据源观察者
 	 */
 	static interface DataSetObserver {
 		public void onChange();
@@ -181,4 +176,6 @@ public interface Indicator {
 	public static interface OnTransitionListener {
 		public void onTransition(View view, int position, float selectPercent);
 	}
+
+	public void onPageScrollStateChanged(int state);
 }

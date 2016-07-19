@@ -18,8 +18,11 @@ package com.shizhefei.view.indicator;
 
 import java.util.ArrayList;
 
+import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.PagerAdapter;
 import android.util.Log;
@@ -27,10 +30,47 @@ import android.view.View;
 import android.view.ViewGroup;
 
 /**
- * 
- * @author试着飞
- * @date 2014年11月1日
- * @version 1.0
+ * Implementation of {@link PagerAdapter} that uses a
+ * {@link Fragment} to manage each page. This class also handles saving and
+ * restoring of fragment's state.
+ *
+ * <p>
+ * This version of the pager is more useful when there are a large number of
+ * pages, working more like a list view. When pages are not visible to the user,
+ * their entire fragment may be destroyed, only keeping the saved state of that
+ * fragment. This allows the pager to hold on to much less memory associated
+ * with each visited page as compared to {@link FragmentPagerAdapter} at the
+ * cost of potentially more overhead when switching between pages.
+ *
+ * <p>
+ * When using FragmentPagerAdapter the host ViewPager must have a valid ID set.
+ * </p>
+ *
+ * <p>
+ * Subclasses only need to implement {@link #getItem(int)} and
+ * {@link #getCount()} to have a working adapter.
+ *
+ * <p>
+ * Here is an example implementation of a pager containing fragments of lists:
+ *
+ * {
+ * development/samples/Support13Demos/src/com/example/android/supportv13/app/
+ * FragmentStatePagerSupport.java complete}
+ *
+ * <p>
+ * The <code>R.layout.fragment_pager</code> resource of the top-level fragment
+ * is:
+ *
+ * { development/samples/Support13Demos/res/layout/fragment_pager.xml
+ * complete}
+ *
+ * <p>
+ * The <code>R.layout.fragment_pager_list</code> resource containing each
+ * individual fragment's layout is:
+ *
+ * {
+ * development/samples/Support13Demos/res/layout/fragment_pager_list.xml
+ * complete}
  */
 public abstract class FragmentListPageAdapter extends PagerAdapter {
 	private static final String TAG = "FragmentStatePagerAdapter";
@@ -54,7 +94,17 @@ public abstract class FragmentListPageAdapter extends PagerAdapter {
 
 	@Override
 	public void startUpdate(ViewGroup container) {
+	}
 
+	public Fragment getExitFragment(int position) {
+		if (mFragments.size() > position) {
+			return mFragments.get(position);
+		}
+		return null;
+	}
+
+	public Fragment getCurrentFragment() {
+		return mCurrentPrimaryItem;
 	}
 
 	@Override
@@ -142,4 +192,57 @@ public abstract class FragmentListPageAdapter extends PagerAdapter {
 		return ((Fragment) object).getView() == view;
 	}
 
+	@Override
+	public Parcelable saveState() {
+		Bundle state = null;
+		if (mSavedState.size() > 0) {
+			state = new Bundle();
+			Fragment.SavedState[] fss = new Fragment.SavedState[mSavedState.size()];
+			mSavedState.toArray(fss);
+			state.putParcelableArray("states", fss);
+		}
+		for (int i = 0; i < mFragments.size(); i++) {
+			Fragment f = mFragments.get(i);
+			if (f != null && f.isAdded()) {
+				if (state == null) {
+					state = new Bundle();
+				}
+				String key = "f" + i;
+				mFragmentManager.putFragment(state, key, f);
+			}
+		}
+		return state;
+	}
+
+	@Override
+	public void restoreState(Parcelable state, ClassLoader loader) {
+		if (state != null) {
+			Bundle bundle = (Bundle) state;
+			bundle.setClassLoader(loader);
+			Parcelable[] fss = bundle.getParcelableArray("states");
+			mSavedState.clear();
+			mFragments.clear();
+			if (fss != null) {
+				for (int i = 0; i < fss.length; i++) {
+					mSavedState.add((Fragment.SavedState) fss[i]);
+				}
+			}
+			Iterable<String> keys = bundle.keySet();
+			for (String key : keys) {
+				if (key.startsWith("f")) {
+					int index = Integer.parseInt(key.substring(1));
+					Fragment f = mFragmentManager.getFragment(bundle, key);
+					if (f != null) {
+						while (mFragments.size() <= index) {
+							mFragments.add(null);
+						}
+						f.setMenuVisibility(false);
+						mFragments.set(index, f);
+					} else {
+						Log.w(TAG, "Bad fragment at key " + key);
+					}
+				}
+			}
+		}
+	}
 }

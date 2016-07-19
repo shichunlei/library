@@ -29,12 +29,11 @@ import com.shizhefei.view.indicator.Indicator.OnItemSelectedListener;
 import com.shizhefei.view.indicator.Indicator.OnTransitionListener;
 import com.shizhefei.view.indicator.slidebar.ScrollBar;
 import com.shizhefei.view.viewpager.RecyclingPagerAdapter;
+import com.shizhefei.view.viewpager.SViewPager;
 
 /**
  * 
- * @author试着飞
- * @date 2014年11月1日
- * @version 1.0 将indicatorView，ViewPager联合使用
+ * 将indicatorView，ViewPager联合使用
  */
 public class IndicatorViewPager {
 	private Indicator indicatorView;
@@ -42,6 +41,7 @@ public class IndicatorViewPager {
 	private IndicatorPagerAdapter adapter;
 	private OnIndicatorPageChangeListener onIndicatorPageChangeListener;
 
+	@SuppressWarnings("deprecation")
 	public IndicatorViewPager(Indicator indicator, ViewPager viewPager) {
 		super();
 		this.indicatorView = indicator;
@@ -76,8 +76,6 @@ public class IndicatorViewPager {
 
 	/**
 	 * 设置页面切换监听
-	 * 
-	 * @return
 	 */
 	public void setOnIndicatorPageChangeListener(OnIndicatorPageChangeListener onIndicatorPageChangeListener) {
 		this.onIndicatorPageChangeListener = onIndicatorPageChangeListener;
@@ -112,16 +110,6 @@ public class IndicatorViewPager {
 	}
 
 	/**
-	 * 设置预加载界面的个数。左右两边加载界面的个数<br>
-	 * 默认是1，表示左右两边 相连的1个界面会和当前界面同时加载
-	 * 
-	 * @param limit
-	 */
-	public void setPagePrepareNumber(int limit) {
-		viewPager.setPrepareNumber(limit);
-	}
-
-	/**
 	 * 设置page间的图片的宽度
 	 * 
 	 * @param marginPixels
@@ -149,18 +137,9 @@ public class IndicatorViewPager {
 	}
 
 	/**
-	 * 设置page是否可滑动
-	 * 
-	 * @param isCanScroll
-	 */
-	public void setPageCanScroll(boolean isCanScroll) {
-		viewPager.setCanScroll(isCanScroll);
-	}
-
-	/**
 	 * 获取上一次选中的索引
 	 * 
-	 * @return
+	 * @return 上一次选中的索引
 	 */
 	public int getPreSelectItem() {
 		return indicatorView.getPreSelectItem();
@@ -169,7 +148,7 @@ public class IndicatorViewPager {
 	/**
 	 * 获取当前选中的索引
 	 * 
-	 * @return
+	 * @return 当前选中的索引
 	 */
 	public int getCurrentItem() {
 		return viewPager.getCurrentItem();
@@ -204,10 +183,15 @@ public class IndicatorViewPager {
 
 		@Override
 		public void onItemSelected(View selectItemView, int select, int preSelect) {
-			viewPager.setCurrentItem(select, viewPager.isCanScroll());
-			if (onIndicatorPageChangeListener != null) {
-				onIndicatorPageChangeListener.onIndicatorPageChange(preSelect, select);
+			if (viewPager instanceof SViewPager) {
+				viewPager.setCurrentItem(select, ((SViewPager) viewPager).isCanScroll());
+			} else {
+				viewPager.setCurrentItem(select, true);
 			}
+			// if (onIndicatorPageChangeListener != null) {
+			// onIndicatorPageChangeListener.onIndicatorPageChange(preSelect,
+			// select);
+			// }
 		}
 	};
 
@@ -239,7 +223,7 @@ public class IndicatorViewPager {
 
 		@Override
 		public void onPageScrollStateChanged(int state) {
-
+			indicatorView.onPageScrollStateChanged(state);
 		}
 	};
 
@@ -255,8 +239,6 @@ public class IndicatorViewPager {
 
 	/**
 	 * viewpage 的每个页面是view的形式
-	 * 
-	 * @author Administrator
 	 * 
 	 */
 	public static abstract class IndicatorViewPagerAdapter implements IndicatorPagerAdapter {
@@ -331,9 +313,6 @@ public class IndicatorViewPager {
 
 	/**
 	 * viewpage 的每个页面是Fragment的形式
-	 * 
-	 * @author Administrator
-	 * 
 	 */
 	public static abstract class IndicatorFragmentPagerAdapter implements IndicatorPagerAdapter {
 		private FragmentListPageAdapter pagerAdapter;
@@ -380,6 +359,26 @@ public class IndicatorViewPager {
 
 		public int getItemPosition(Object object) {
 			return FragmentListPageAdapter.POSITION_UNCHANGED;
+		}
+
+		/**
+		 * 获取position位置上的Fragment，Fragment没有被创建时返回null
+		 * 
+		 * @param position
+		 * 
+		 * @return 返回已经创建的position的Fragment，如果position位置的fragment没有创建返回null
+		 */
+		public Fragment getExitFragment(int position) {
+			return pagerAdapter.getExitFragment(position);
+		}
+
+		/**
+		 * 获取当前显示的Fragment
+		 * 
+		 * @return 返回当前选中的fragment
+		 */
+		public Fragment getCurrentFragment() {
+			return pagerAdapter.getCurrentFragment();
 		}
 
 		public abstract int getCount();

@@ -99,7 +99,7 @@ public abstract class RecyclingPagerAdapter extends PagerAdapter {
 	 * set. You can either create a View manually or inflate it from an XML
 	 * layout file. When the View is inflated, the parent View (GridView,
 	 * ListView...) will apply default layout parameters unless you use
-	 * {@link android.view.LayoutInflater#inflate(int, android.view.ViewGroup, boolean)}
+	 * {@link android.view.LayoutInflater#inflate(int, ViewGroup, boolean)}
 	 * to specify a root view and to prevent attachment to the root.
 	 * 
 	 * @param position
@@ -114,7 +114,7 @@ public abstract class RecyclingPagerAdapter extends PagerAdapter {
 	 *            that this View is always of the right type (see
 	 *            {@link #getViewTypeCount()} and {@link #getItemViewType(int)}
 	 *            ).
-	 * @param parent
+	 * @param container
 	 *            The parent that this view will eventually be attached to
 	 * @return A View corresponding to the data at the specified position.
 	 */

@@ -21,12 +21,11 @@ import android.graphics.Rect;
 import android.widget.TextView;
 
 import com.shizhefei.view.indicator.Indicator;
-import com.shizhefei.view.indicator.slidebar.ColorBar;
 
 /**
  * tab的文本多宽scrollbar就显示多宽，实现新浪个人首页的tab的scrollbar效果
  * 
- * @author LuckyJayce
+ * LuckyJayce
  *
  */
 public class TextWidthColorBar extends ColorBar {
@@ -48,7 +47,7 @@ public class TextWidthColorBar extends ColorBar {
 	@Override
 	public int getWidth(int tabWidth) {
 		if (realWidth == 0) {
-			if (indicator.getAdapter() != null) {
+			if (indicator.getIndicatorAdapter() != null) {
 				TextView textView = getTextView(indicator.getCurrentItem());
 				if (textView != null) {
 					realWidth = getTextWidth(textView);
@@ -69,6 +68,9 @@ public class TextWidthColorBar extends ColorBar {
 	}
 
 	private int getTextWidth(TextView textView) {
+		if(textView==null){
+		   return 0;
+		}
 		Rect bounds = new Rect();
 		String text = textView.getText().toString();
 		Paint paint = textView.getPaint();
