@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="pull_to_refresh">Pull To Refresh</string>
+    <string name="release_to_refresh">Release To Refresh</string>
+    <string name="refreshing">Refreshing...</string>
+    <string name="refresh_succeed">Refresh Succeed</string>
+    <string name="refresh_fail">Refresh Fail</string>
+    <string name="release_to_load_more">Release To Load More</string>
+    <string name="pullup_to_load_more">Pullup To Load More</string>
+    <string name="loading">Loading...</string>
+    <string name="load_more_succeed">Load More Succeed</string>
+    <string name="load_more_fail">Load More Fail</string>
+
+</resources>
