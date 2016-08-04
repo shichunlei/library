@@ -14,7 +14,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginRight="48dp"
+            android:layout_marginRight="28dp"
             android:layout_toLeftOf="@+id/tvRefresh"
             android:background="@drawable/icon_refresh_arrow" />
 
@@ -23,7 +23,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginRight="48dp"
+            android:layout_marginRight="28dp"
             android:layout_toLeftOf="@+id/tvRefresh"
             android:background="@drawable/refresh_success" />
 
@@ -33,12 +33,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginRight="48dp"
+            android:layout_marginRight="28dp"
             android:layout_toLeftOf="@+id/tvRefresh" />
 
         <TextView
             android:id="@+id/tvRefresh"
-            android:layout_width="100dp"
+            android:layout_width="150dp"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:gravity="center"
